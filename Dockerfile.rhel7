@@ -5,9 +5,8 @@ COPY . .
 ENV GO_PACKAGE github.com/openshift/console-operator
 RUN go build -ldflags "-X $GO_PACKAGE/pkg/version.versionFromGit=$(git describe --long --tags --abbrev=7 --match 'v[0-9]*')" -tags="${TAGS}" -o console ./cmd/console
 
-FROM registry.ci.openshift.org/ocp/4.21:base-rhel9
+FROM registry.ci.openshift.org/origin/scos-4.21:base-stream9
 RUN useradd console-operator
-USER console-operator
 COPY --from=builder /go/src/github.com/openshift/console-operator/console /usr/bin/console
 
 # these manifests are necessary for the installer
@@ -16,6 +15,12 @@ COPY manifests /manifests/
 # out-of-the-box quickstarts
 COPY quickstarts/*.yaml /manifests/
 
+# okd install support
+COPY quickstarts/okd_quickstarts/ /manifests/okd_quickstarts/
+COPY hack/okd_install_support.sh /tmp
+RUN /bin/bash /tmp/okd_install_support.sh
+
+USER console-operator
 # extensions manifests generated from openshift/api types
 COPY vendor/github.com/openshift/api/console/v1/zz_generated.crd-manifests/*.crd.yaml /manifests/
 COPY vendor/github.com/openshift/api/operator/*/zz_generated.crd-manifests/*console*.crd.yaml /manifests/
